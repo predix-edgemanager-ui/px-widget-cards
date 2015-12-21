@@ -438,7 +438,7 @@ a {
 
 .viewport {
   width: 100%;
-  max-width: 80rem;
+  max-width: 60rem;
   margin-right: auto;
   margin-left: auto; }
 
@@ -627,15 +627,15 @@ a {
           -ms-flex: 1;
               flex: 1;
       /* [2] */
-      -webkit-flex-basis: 20rem;
-          -ms-flex-preferred-size: 20rem;
-              flex-basis: 20rem; }
+      -webkit-flex-basis: 13.3333333333rem;
+          -ms-flex-preferred-size: 13.3333333333rem;
+              flex-basis: 13.3333333333rem; }
       .layout > .layout__item:nth-last-child(-n+4):first-child,
       .layout > .layout__item:nth-last-child(-n+4):first-child ~ .layout__item {
-        -webkit-flex-basis: 30rem;
-            -ms-flex-preferred-size: 30rem;
-                flex-basis: 30rem; }
-        @media screen and (min-width: 80rem) {
+        -webkit-flex-basis: 20rem;
+            -ms-flex-preferred-size: 20rem;
+                flex-basis: 20rem; }
+        @media screen and (min-width: 60rem) {
           .layout > .layout__item:nth-last-child(-n+4):first-child,
           .layout > .layout__item:nth-last-child(-n+4):first-child ~ .layout__item {
             -webkit-flex-basis: 0;
@@ -643,16 +643,16 @@ a {
                     flex-basis: 0; } }
       .layout > .layout__item:nth-last-child(-n+3):first-child,
       .layout > .layout__item:nth-last-child(-n+3):first-child ~ .layout__item {
-        -webkit-flex-basis: 40rem;
-            -ms-flex-preferred-size: 40rem;
-                flex-basis: 40rem; }
-        @media screen and (min-width: 80rem) {
+        -webkit-flex-basis: 26.6666666667rem;
+            -ms-flex-preferred-size: 26.6666666667rem;
+                flex-basis: 26.6666666667rem; }
+        @media screen and (min-width: 60rem) {
           .layout > .layout__item:nth-last-child(-n+3):first-child,
           .layout > .layout__item:nth-last-child(-n+3):first-child ~ .layout__item {
             -webkit-flex-basis: 0;
                 -ms-flex-preferred-size: 0;
                     flex-basis: 0; } }
-      @media screen and (min-width: 80rem) {
+      @media screen and (min-width: 60rem) {
         .layout > .layout__item {
           -webkit-flex-basis: 0;
               -ms-flex-preferred-size: 0;
@@ -684,7 +684,7 @@ a {
     -webkit-flex-basis: 20rem;
         -ms-flex-preferred-size: 20rem;
             flex-basis: 20rem; }
-    @media screen and (min-width: 80rem) {
+    @media screen and (min-width: 60rem) {
       .layout--widget > .layout__item:nth-last-child(-n+6):first-child,
       .layout--widget > .layout__item:nth-last-child(-n+6):first-child ~ .layout__item {
         -webkit-flex-basis: 32% !important;
@@ -696,11 +696,11 @@ a {
   border-bottom-style: solid; }
   .px-threeup .layout--widget > .layout__item:last-child {
     border-bottom: 0; }
-  .px-threeup .layout--widget > .layout__item:nth-last-child(-n+6):first-child,
-  .px-threeup .layout--widget > .layout__item:nth-last-child(-n+6):first-child ~ .px-threeup {
-    -webkit-flex-basis: 60rem;
-        -ms-flex-preferred-size: 60rem;
-            flex-basis: 60rem; }
+  .px-threeup .layout--widget > .layout__item:nth-last-child(odd):first-child,
+  .px-threeup .layout--widget > .layout__item:nth-last-child(odd):first-child ~ .px-threeup {
+    -webkit-flex-basis: 40.6666666667rem;
+        -ms-flex-preferred-size: 40.6666666667rem;
+            flex-basis: 40.6666666667rem; }
 
 ::content [class^="widget-"] {
   width: 100%;
@@ -721,7 +721,7 @@ a {
 .px-twoup [data-eq-state$="small"] .layout__item, .px-twoup [data-eq-state$="large"] .layout__item {
   border-bottom: 0; }
 
-@media screen and (min-width: 80rem) {
+@media screen and (min-width: 60rem) {
   .px-twoup > .layout__item {
     border-bottom: 0; } }
 
@@ -734,7 +734,7 @@ a {
       -ms-flex-preferred-size: 20rem;
           flex-basis: 20rem;
   border-bottom: 0; }
-  @media screen and (min-width: 80rem) {
+  @media screen and (min-width: 60rem) {
     .px-threeup [data-eq-state$="small"] .layout__item {
       -webkit-flex-basis: 32% !important;
           -ms-flex-preferred-size: 32% !important;
@@ -758,7 +758,7 @@ a {
       -ms-flex-preferred-size: 20rem;
           flex-basis: 20rem;
   border-bottom: 0; }
-  @media screen and (min-width: 80rem) {
+  @media screen and (min-width: 60rem) {
     .px-threeup [data-eq-state$="large"] .layout__item {
       -webkit-flex-basis: 32% !important;
           -ms-flex-preferred-size: 32% !important;
@@ -781,7 +781,7 @@ a {
 .px-threeup [data-eq-state$="large"] .layout__item {
   border-bottom: 0; }
 
-@media screen and (min-width: 80rem) {
+@media screen and (min-width: 60rem) {
   .px-threeup > .layout__item {
     border-bottom: 0;
     min-width: 0px; } }
