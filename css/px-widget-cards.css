@@ -696,11 +696,11 @@ a {
   border-bottom-style: solid; }
   .px-threeup .layout--widget > .layout__item:last-child {
     border-bottom: 0; }
-  .px-threeup .layout--widget > .layout__item:nth-last-child(-n+6):first-child,
-  .px-threeup .layout--widget > .layout__item:nth-last-child(-n+6):first-child ~ .px-threeup {
-    -webkit-flex-basis: 60rem;
-        -ms-flex-preferred-size: 60rem;
-            flex-basis: 60rem; }
+  .px-threeup .layout--widget > .layout__item:nth-last-child(odd):first-child,
+  .px-threeup .layout--widget > .layout__item:nth-last-child(odd):first-child ~ .px-threeup {
+    -webkit-flex-basis: 40rem;
+        -ms-flex-preferred-size: 40rem;
+            flex-basis: 40rem; }
 
 ::content [class^="widget-"] {
   width: 100%;
@@ -734,7 +734,7 @@ a {
       -ms-flex-preferred-size: 20rem;
           flex-basis: 20rem;
   border-bottom: 0; }
-  @media screen and (min-width: 80rem) {
+  @media screen and (min-width: 60rem) {
     .px-threeup [data-eq-state$="small"] .layout__item {
       -webkit-flex-basis: 32% !important;
           -ms-flex-preferred-size: 32% !important;
@@ -758,7 +758,7 @@ a {
       -ms-flex-preferred-size: 20rem;
           flex-basis: 20rem;
   border-bottom: 0; }
-  @media screen and (min-width: 80rem) {
+  @media screen and (min-width: 60rem) {
     .px-threeup [data-eq-state$="large"] .layout__item {
       -webkit-flex-basis: 32% !important;
           -ms-flex-preferred-size: 32% !important;
@@ -781,7 +781,7 @@ a {
 .px-threeup [data-eq-state$="large"] .layout__item {
   border-bottom: 0; }
 
-@media screen and (min-width: 80rem) {
+@media screen and (min-width: 60rem) {
   .px-threeup > .layout__item {
     border-bottom: 0;
     min-width: 0px; } }
