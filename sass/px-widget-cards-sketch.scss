@@ -64,9 +64,9 @@ $inuit-enable-layout--full      : true;
     &:last-child {
       border-bottom: 0;
     }
-    &:nth-last-child(-n+6):first-child,
-    &:nth-last-child(-n+6):first-child ~ .px-threeup {
-      flex-basis: calculateRem(900px);
+    &:nth-last-child(odd):first-child,
+    &:nth-last-child(odd):first-child ~ .px-threeup {
+      flex-basis: calculateRem(610px);
 
     }
   }
@@ -191,7 +191,7 @@ $inuit-enable-layout--full      : true;
 .px-threeup [data-eq-state$="large"] .layout__item {
  border-bottom: 0; }
 
-@media screen and (min-width: 80rem) {
+@media screen and (min-width: 60rem) {
  .px-threeup > .layout__item {
    border-bottom: 0;
    min-width:0px;
