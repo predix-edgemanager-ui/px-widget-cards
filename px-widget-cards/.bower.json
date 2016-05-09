@@ -1,6 +1,6 @@
 {
   "name": "px-widget-cards",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "main": [
     "px-widget-cards.html"
   ],
@@ -25,14 +25,13 @@
     "px-starter-kit-design": "https://github.com/PredixDev/px-starter-kit-design.git#~0.5.1"
   },
   "homepage": "https://github.com/PredixDev/px-widget-cards",
-  "_release": "1.3.1",
+  "_release": "1.3.2",
   "_resolution": {
     "type": "version",
-    "tag": "v1.3.1",
-    "commit": "2a7b204a0be3cc2577b4a4ea79a466cb33a92f16"
+    "tag": "v1.3.2",
+    "commit": "99cf64218a6535c238aef841e5d35ef93100a1ef"
   },
   "_source": "https://github.com/PredixDev/px-widget-cards.git",
   "_target": "^1.3.1",
-  "_originalSource": "px-widget-cards",
-  "_direct": true
+  "_originalSource": "px-widget-cards"
 }
