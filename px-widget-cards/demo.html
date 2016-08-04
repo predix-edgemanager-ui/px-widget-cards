@@ -1780,10 +1780,12 @@ addEventListener('DOMContentLoaded', resolve);
 }());window.Polymer = {
 Settings: function () {
 var settings = window.Polymer || {};
+if (!settings.noUrlSettings) {
 var parts = location.search.slice(1).split('&');
 for (var i = 0, o; i < parts.length && (o = parts[i]); i++) {
 o = o.split('=');
 o[0] && (settings[o[0]] = o[1] || true);
+}
 }
 settings.wantShadow = settings.dom === 'shadow';
 settings.hasShadow = Boolean(Element.prototype.createShadowRoot);
@@ -1931,8 +1933,14 @@ _addFeature: function (feature) {
 this.extend(this, feature);
 },
 registerCallback: function () {
+if (settings.lazyRegister === 'max') {
+if (this.beforeRegister) {
+this.beforeRegister();
+}
+} else {
 this._desugarBehaviors();
 this._doBehavior('beforeRegister');
+}
 this._registerFeatures();
 if (!settings.lazyRegister) {
 this.ensureRegisterFinished();
@@ -1951,7 +1959,11 @@ ensureRegisterFinished: function () {
 this._ensureRegisterFinished(this);
 },
 _ensureRegisterFinished: function (proto) {
-if (proto.__hasRegisterFinished !== proto.is) {
+if (proto.__hasRegisterFinished !== proto.is || !proto.is) {
+if (settings.lazyRegister === 'max') {
+proto._desugarBehaviors();
+proto._doBehaviorOnly('beforeRegister');
+}
 proto.__hasRegisterFinished = proto.is;
 if (proto._finishRegisterFeatures) {
 proto._finishRegisterFeatures();
@@ -1987,14 +1999,14 @@ newValue
 _attributeChangedImpl: function (name) {
 this._setAttributeToProperty(this, name);
 },
-extend: function (prototype, api) {
-if (prototype && api) {
-var n$ = Object.getOwnPropertyNames(api);
+extend: function (target, source) {
+if (target && source) {
+var n$ = Object.getOwnPropertyNames(source);
 for (var i = 0, n; i < n$.length && (n = n$[i]); i++) {
-this.copyOwnProperty(n, api, prototype);
+this.copyOwnProperty(n, source, target);
 }
 }
-return prototype || api;
+return target || source;
 },
 mixin: function (target, source) {
 for (var i in source) {
@@ -2185,6 +2197,11 @@ for (var i = 0; i < this.behaviors.length; i++) {
 this._invokeBehavior(this.behaviors[i], name, args);
 }
 this._invokeBehavior(this, name, args);
+},
+_doBehaviorOnly: function (name, args) {
+for (var i = 0; i < this.behaviors.length; i++) {
+this._invokeBehavior(this.behaviors[i], name, args);
+}
 },
 _invokeBehavior: function (b, name, args) {
 var fn = b[name];
@@ -2437,7 +2454,7 @@ default:
 return value != null ? value : undefined;
 }
 }
-});Polymer.version = '1.6.0';Polymer.Base._addFeature({
+});Polymer.version = "1.6.1";Polymer.Base._addFeature({
 _registerFeatures: function () {
 this._prepIs();
 this._prepBehaviors();
@@ -2454,10 +2471,6 @@ this._marshalHostAttributes();
 this._marshalBehaviors();
 }
 });</script>
-
-
-
-
 
 
 
@@ -4623,8 +4636,6 @@ _marshalBehavior: function (b) {
 
 
 
-
-
 <script>Polymer.nar = [];
 Polymer.Annotations = {
 parseAnnotations: function (template) {
@@ -4863,7 +4874,7 @@ at.value = a === 'style' ? resolveCss(v, ownerDocument) : resolve(v, ownerDocume
 }
 }
 function resolve(url, ownerDocument) {
-if (url && url[0] === '#') {
+if (url && ABS_URL.test(url)) {
 return url;
 }
 var resolver = getUrlResolver(ownerDocument);
@@ -4894,6 +4905,7 @@ var URL_ATTRS = {
 ],
 form: ['action']
 };
+var ABS_URL = /(^\/)|(^#)|(^[\w-\d]*:)/;
 var BINDING_RX = /\{\{|\[\[/;
 Polymer.ResolveUrl = {
 resolveCss: resolveCss,
@@ -5176,6 +5188,10 @@ return false;
 }();
 var IS_TOUCH_ONLY = navigator.userAgent.match(/iP(?:[oa]d|hone)|Android/);
 var mouseCanceller = function (mouseEvent) {
+var sc = mouseEvent.sourceCapabilities;
+if (sc && !sc.firesTouchEvents) {
+return;
+}
 mouseEvent[HANDLED_OBJ] = { skip: true };
 if (mouseEvent.type === 'click') {
 var path = Polymer.dom(mouseEvent).path;
@@ -6042,7 +6058,7 @@ node = node || this;
 var effects = node._propertyEffects && node._propertyEffects[property];
 if (effects) {
 node._propertySetter(property, value, effects, quiet);
-} else {
+} else if (node[property] !== value) {
 node[property] = value;
 }
 },
@@ -6519,9 +6535,6 @@ _applyEffectValue: function (info, value) {
 var node = this._nodes[info.index];
 var property = info.name;
 value = this._computeFinalAnnotationValue(node, property, value, info);
-if (info.customEvent && node[property] === value) {
-return;
-}
 if (info.kind == 'attribute') {
 this.serializeValueToAttribute(value, property, node);
 } else {
@@ -6589,6 +6602,7 @@ this._configure();
 },
 _configure: function () {
 this._configureAnnotationReferences();
+this._configureInstanceProperties();
 this._aboveConfig = this.mixin({}, this._config);
 var config = {};
 for (var i = 0; i < this.behaviors.length; i++) {
@@ -6601,13 +6615,18 @@ if (this._clients && this._clients.length) {
 this._distributeConfig(this._config);
 }
 },
+_configureInstanceProperties: function () {
+for (var i in this._propertyEffects) {
+if (!usePolyfillProto && this.hasOwnProperty(i)) {
+this._configValue(i, this[i]);
+delete this[i];
+}
+}
+},
 _configureProperties: function (properties, config) {
 for (var i in properties) {
 var c = properties[i];
-if (!usePolyfillProto && this.hasOwnProperty(i) && this._propertyEffects && this._propertyEffects[i]) {
-config[i] = this[i];
-delete this[i];
-} else if (c.value !== undefined) {
+if (c.value !== undefined) {
 var value = c.value;
 if (typeof value == 'function') {
 value = value.call(this, this._config);
@@ -7308,10 +7327,42 @@ return this.getCssBuildType(dm);
 getCssBuildType: function (element) {
 return element.getAttribute('css-build');
 },
+_findMatchingParen: function (text, start) {
+var level = 0;
+for (var i = start, l = text.length; i < l; i++) {
+switch (text[i]) {
+case '(':
+level++;
+break;
+case ')':
+if (--level === 0) {
+return i;
+}
+break;
+}
+}
+return -1;
+},
+processVariableAndFallback: function (str, callback) {
+var start = str.indexOf('var(');
+if (start === -1) {
+return callback(str, '', '', '');
+}
+var end = this._findMatchingParen(str, start + 3);
+var inner = str.substring(start + 4, end);
+var prefix = str.substring(0, start);
+var suffix = this.processVariableAndFallback(str.substring(end + 1), callback);
+var comma = inner.indexOf(',');
+if (comma === -1) {
+return callback(prefix, inner.trim(), '', suffix);
+}
+var value = inner.substring(0, comma).trim();
+var fallback = inner.substring(comma + 1).trim();
+return callback(prefix, value, fallback, suffix);
+},
 rx: {
 VAR_ASSIGN: /(?:^|[;\s{]\s*)(--[\w-]*?)\s*:\s*(?:([^;{]*)|{([^}]*)})(?:(?=[;\s}])|$)/gi,
 MIXIN_MATCH: /(?:^|\W+)@apply\s*\(?([^);\n]*)\)?/gi,
-VAR_MATCH: /(^|\W+)var\([\s]*([^,)]*)[\s]*,?[\s]*((?:[^,()]*)|(?:[^;()]*\([^;)]*\)+))[\s]*?\)/gi,
 VAR_CONSUMED: /(--[\w-]+)\s*([:,;)]|$)/gi,
 ANIMATION_MATCH: /(animation\s*:)|(animation-name\s*:)/,
 MEDIA_MATCH: /@media[^(]*(\([^)]*\))/,
@@ -7606,42 +7657,66 @@ STRIP: /%[^,]*$/
 var styleUtil = Polymer.StyleUtil;
 var MIXIN_MATCH = styleUtil.rx.MIXIN_MATCH;
 var VAR_ASSIGN = styleUtil.rx.VAR_ASSIGN;
-var VAR_MATCH = styleUtil.rx.VAR_MATCH;
+var BAD_VAR = /var\(\s*(--[^,]*),\s*(--[^)]*)\)/g;
 var APPLY_NAME_CLEAN = /;\s*/m;
+var INITIAL_INHERIT = /^\s*(initial)|(inherit)\s*$/;
 var MIXIN_VAR_SEP = '_-_';
 var mixinMap = {};
-function mapSet(name, prop) {
+function mapSet(name, props) {
 name = name.trim();
-mixinMap[name] = prop;
+mixinMap[name] = {
+properties: props,
+dependants: {}
+};
 }
 function mapGet(name) {
 name = name.trim();
 return mixinMap[name];
 }
+function replaceInitialOrInherit(property, value) {
+var match = INITIAL_INHERIT.exec(value);
+if (match) {
+if (match[1]) {
+value = ApplyShim._getInitialValueForProperty(property);
+} else {
+value = 'apply-shim-inherit';
+}
+}
+return value;
+}
 function cssTextToMap(text) {
 var props = text.split(';');
+var property, value;
 var out = {};
 for (var i = 0, p, sp; i < props.length; i++) {
 p = props[i];
 if (p) {
 sp = p.split(':');
 if (sp.length > 1) {
-out[sp[0].trim()] = sp.slice(1).join(':');
+property = sp[0].trim();
+value = replaceInitialOrInherit(property, sp.slice(1).join(':'));
+out[property] = value;
 }
 }
 }
 return out;
 }
+function invalidateMixinEntry(mixinEntry) {
+var currentProto = ApplyShim.__currentElementProto;
+var currentElementName = currentProto && currentProto.is;
+for (var elementName in mixinEntry.dependants) {
+if (elementName !== currentElementName) {
+mixinEntry.dependants[elementName].__applyShimInvalid = true;
+}
+}
+}
 function produceCssProperties(matchText, propertyName, valueProperty, valueMixin) {
 if (valueProperty) {
-VAR_MATCH.lastIndex = 0;
-var m = VAR_MATCH.exec(valueProperty);
-if (m) {
-var value = m[2];
-if (mapGet(value)) {
+styleUtil.processVariableAndFallback(valueProperty, function (prefix, value) {
+if (value && mapGet(value)) {
 valueMixin = '@apply ' + value + ';';
 }
-}
+});
 }
 if (!valueMixin) {
 return matchText;
@@ -7649,44 +7724,57 @@ return matchText;
 var mixinAsProperties = consumeCssProperties(valueMixin);
 var prefix = matchText.slice(0, matchText.indexOf('--'));
 var mixinValues = cssTextToMap(mixinAsProperties);
-var oldProperties = mapGet(propertyName);
 var combinedProps = mixinValues;
-if (oldProperties) {
-combinedProps = Polymer.Base.mixin(oldProperties, mixinValues);
+var mixinEntry = mapGet(propertyName);
+var oldProps = mixinEntry && mixinEntry.properties;
+if (oldProps) {
+combinedProps = Object.create(oldProps);
+combinedProps = Polymer.Base.mixin(combinedProps, mixinValues);
 } else {
 mapSet(propertyName, combinedProps);
 }
 var out = [];
 var p, v;
+var needToInvalidate = false;
 for (p in combinedProps) {
 v = mixinValues[p];
 if (v === undefined) {
 v = 'initial';
 }
+if (oldProps && !(p in oldProps)) {
+needToInvalidate = true;
+}
 out.push(propertyName + MIXIN_VAR_SEP + p + ': ' + v);
+}
+if (needToInvalidate) {
+invalidateMixinEntry(mixinEntry);
+}
+if (mixinEntry) {
+mixinEntry.properties = combinedProps;
+}
+if (valueProperty) {
+prefix = matchText + ';' + prefix;
 }
 return prefix + out.join('; ') + ';';
 }
-function fixVars(matchText, prefix, value, fallback) {
-if (!fallback || fallback.indexOf('--') !== 0) {
-return matchText;
-}
-return [
-prefix,
-'var(',
-value,
-', var(',
-fallback,
-'));'
-].join('');
+function fixVars(matchText, varA, varB) {
+return 'var(' + varA + ',' + 'var(' + varB + '));';
 }
 function atApplyToCssProperties(mixinName, fallbacks) {
 mixinName = mixinName.replace(APPLY_NAME_CLEAN, '');
 var vars = [];
-var mixinProperties = mapGet(mixinName);
-if (mixinProperties) {
+var mixinEntry = mapGet(mixinName);
+if (!mixinEntry) {
+mapSet(mixinName, {});
+mixinEntry = mapGet(mixinName);
+}
+if (mixinEntry) {
+var currentProto = ApplyShim.__currentElementProto;
+if (currentProto) {
+mixinEntry.dependants[currentProto.is] = currentProto;
+}
 var p, parts, f;
-for (p in mixinProperties) {
+for (p in mixinEntry.properties) {
 f = fallbacks && fallbacks[p];
 parts = [
 p,
@@ -7726,10 +7814,14 @@ MIXIN_MATCH.lastIndex = idx + replacement.length;
 return text;
 }
 var ApplyShim = {
+_measureElement: null,
 _map: mixinMap,
 _separator: MIXIN_VAR_SEP,
-transform: function (styles) {
+transform: function (styles, elementProto) {
+this.__currentElementProto = elementProto;
 styleUtil.forRulesInStyles(styles, this._boundTransformRule);
+elementProto.__applyShimInvalid = false;
+this.__currentElementProto = null;
 },
 transformRule: function (rule) {
 rule.cssText = this.transformCssText(rule.parsedCssText);
@@ -7738,9 +7830,17 @@ rule.selector = ':host > *';
 }
 },
 transformCssText: function (cssText) {
-cssText = cssText.replace(VAR_MATCH, fixVars);
+cssText = cssText.replace(BAD_VAR, fixVars);
 cssText = cssText.replace(VAR_ASSIGN, produceCssProperties);
 return consumeCssProperties(cssText);
+},
+_getInitialValueForProperty: function (property) {
+if (!this._measureElement) {
+this._measureElement = document.createElement('meta');
+this._measureElement.style.all = 'initial';
+document.head.appendChild(this._measureElement);
+}
+return window.getComputedStyle(this._measureElement).getPropertyValue(property);
 }
 };
 ApplyShim._boundTransformRule = ApplyShim.transformRule.bind(ApplyShim);
@@ -7777,7 +7877,7 @@ return;
 }
 this._styles = this._styles || this._collectStyles();
 if (settings.useNativeCSSProperties && !this.__cssBuild) {
-applyShim.transform(this._styles);
+applyShim.transform(this._styles, this);
 }
 var cssText = settings.useNativeCSSProperties && hasTargetedCssBuild ? this._styles.length && this._styles[0].textContent.trim() : styleTransformer.elementStyles(this);
 this._prepStyleProperties();
@@ -7865,6 +7965,7 @@ return mo;
 var matchesSelector = Polymer.DomApi.matchesSelector;
 var styleUtil = Polymer.StyleUtil;
 var styleTransformer = Polymer.StyleTransformer;
+var IS_IE = navigator.userAgent.match('Trident');
 var settings = Polymer.Settings;
 return {
 decorateStyles: function (styles, scope) {
@@ -7919,9 +8020,13 @@ return true;
 } else {
 var m, rx = this.rx.VAR_ASSIGN;
 var cssText = rule.parsedCssText;
+var value;
 var any;
 while (m = rx.exec(cssText)) {
-properties[m[1].trim()] = (m[2] || m[3]).trim();
+value = (m[2] || m[3]).trim();
+if (value !== 'inherit') {
+properties[m[1].trim()] = value;
+}
 any = true;
 }
 return any;
@@ -7955,11 +8060,16 @@ if (property.indexOf(';') >= 0) {
 property = this.valueForProperties(property, props);
 } else {
 var self = this;
-var fn = function (all, prefix, value, fallback) {
-var propertyValue = self.valueForProperty(props[value], props) || self.valueForProperty(props[fallback] || fallback, props) || fallback;
-return prefix + (propertyValue || '');
+var fn = function (prefix, value, fallback, suffix) {
+var propertyValue = self.valueForProperty(props[value], props);
+if (!propertyValue || propertyValue === 'initial') {
+propertyValue = self.valueForProperty(props[fallback] || fallback, props) || fallback;
+} else if (propertyValue === 'apply-shim-inherit') {
+propertyValue = 'inherit';
+}
+return prefix + (propertyValue || '') + suffix;
 };
-property = property.replace(this.rx.VAR_MATCH, fn);
+property = styleUtil.processVariableAndFallback(property, fn);
 }
 }
 return property && property.trim() || '';
@@ -8057,7 +8167,7 @@ var isRoot = parsedSelector === ':root';
 var isHost = parsedSelector.indexOf(':host') === 0;
 var cssBuild = scope.__cssBuild || style.__cssBuild;
 if (cssBuild === 'shady') {
-isRoot = parsedSelector === hostScope + '> *.' + hostScope || parsedSelector.indexOf('html') !== -1;
+isRoot = parsedSelector === hostScope + ' > *.' + hostScope || parsedSelector.indexOf('html') !== -1;
 isHost = !isRoot && parsedSelector.indexOf(hostScope) === 0;
 }
 if (cssBuild === 'shadow') {
@@ -8072,7 +8182,7 @@ if (isHost) {
 if (settings.useNativeShadow && !rule.transformedSelector) {
 rule.transformedSelector = styleTransformer._transformRuleCss(rule, styleTransformer._transformComplexSelector, scope.is, hostScope);
 }
-selectorToMatch = rule.transformedSelector || hostScope;
+selectorToMatch = rule.transformedSelector || rule.parsedSelector;
 }
 callback({
 selector: selectorToMatch,
@@ -8188,6 +8298,9 @@ style._useCount++;
 }
 element._customStyle = style;
 }
+if (IS_IE) {
+style.textContent = style.textContent;
+}
 return style;
 },
 mixinCustomStyle: function (props, customStyle) {
@@ -8200,14 +8313,20 @@ props[i] = v;
 }
 },
 updateNativeStyleProperties: function (element, properties) {
-for (var i = 0; i < element.style.length; i++) {
-element.style.removeProperty(element.style[i]);
+var oldPropertyNames = element.__customStyleProperties;
+if (oldPropertyNames) {
+for (var i = 0; i < oldPropertyNames.length; i++) {
+element.style.removeProperty(oldPropertyNames[i]);
 }
+}
+var propertyNames = [];
 for (var p in properties) {
 if (properties[p] !== null) {
 element.style.setProperty(p, properties[p]);
+propertyNames.push(p);
 }
 }
+element.__customStyleProperties = propertyNames;
 },
 rx: styleUtil.rx,
 XSCOPE_NAME: 'x-scope'
@@ -8341,6 +8460,23 @@ this._customStyle = null;
 _needsStyleProperties: function () {
 return Boolean(!nativeVariables && this._ownStylePropertyNames && this._ownStylePropertyNames.length);
 },
+_validateApplyShim: function () {
+if (this.__applyShimInvalid) {
+Polymer.ApplyShim.transform(this._styles, this.__proto__);
+var cssText = styleTransformer.elementStyles(this);
+if (nativeShadow) {
+var templateStyle = this._template.content.querySelector('style');
+if (templateStyle) {
+templateStyle.textContent = cssText;
+}
+} else {
+var shadyStyle = this._scopeStyle && this._scopeStyle.nextSibling;
+if (shadyStyle) {
+shadyStyle.textContent = cssText;
+}
+}
+}
+},
 _beforeAttached: function () {
 if ((!this._scopeSelector || this.__stylePropertiesInvalid) && this._needsStyleProperties()) {
 this.__stylePropertiesInvalid = false;
@@ -8359,6 +8495,9 @@ return styleDefaults;
 },
 _updateStyleProperties: function () {
 var info, scope = this._findStyleHost();
+if (!scope._styleProperties) {
+scope._computeStyleProperties();
+}
 if (!scope._styleCache) {
 scope._styleCache = new Polymer.StyleCache();
 }
@@ -8518,6 +8657,7 @@ this._setupDebouncers();
 this._setupShady();
 this._registerHost();
 if (this._template) {
+this._validateApplyShim();
 this._poolContent();
 this._beginHosting();
 this._stampTemplate();
@@ -9710,7 +9850,7 @@ this._instance._showHideChildren(hidden);
 },
 _forwardParentProp: function (prop, value) {
 if (this._instance) {
-this._instance[prop] = value;
+this._instance.__setProperty(prop, value, true);
 }
 },
 _forwardParentPath: function (path, value) {
@@ -9766,6 +9906,8 @@ return this.dataHost._scopeElementClass(element, selector);
 return selector;
 }
 },
+_configureInstanceProperties: function () {
+},
 _prepConfigure: function () {
 var config = {};
 for (var prop in this._propertyEffects) {
@@ -9801,8 +9943,6 @@ this._insertChildren();
 this.fire('dom-change');
 }
 });</script>
-
-
 
 
 
@@ -10071,9 +10211,7 @@ pre {
 html {
   box-sizing: border-box; }
 
-*,
-*:before,
-*:after {
+*, *:before, *:after {
   box-sizing: inherit; }
 
 /**
@@ -10107,15 +10245,13 @@ a {
   /**
  * Improve readability when focused and also mouse hovered in all browsers.
  */ }
-  a:link,
-  a:visited {
+  a:link, a:visited {
     color: #3e87e8; }
   a:hover {
     color: #3573c5; }
   a:active {
     color: #2b5ea2; }
-  a:active,
-  a:hover {
+  a:active, a:hover {
     outline: 0; }
 
 /**
@@ -10198,9 +10334,9 @@ a {
   padding: 0 !important;
   clip: rect(0 0 0 0) !important; }
 
-.a11y.focusable:active,
-.a11y.focusable:focus,
-.visuallyhidden.focusable:active, .visuallyhidden.focusable:focus {
+.a11y.focusable:active, .a11y.focusable:focus,
+.visuallyhidden.focusable:active,
+.visuallyhidden.focusable:focus {
   position: static;
   overflow: visible;
   width: auto;
@@ -10287,154 +10423,124 @@ a {
   visibility: hidden !important; }
 
 .flex {
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex; }
 
 .inline--flex {
-  display: -webkit-inline-flex;
   display: -ms-inline-flexbox;
   display: inline-flex; }
 
 .flex--row {
-  -webkit-flex-direction: row;
-      -ms-flex-direction: row;
-          flex-direction: row; }
+  -ms-flex-direction: row;
+      flex-direction: row; }
 
 .flex--row--rev {
-  -webkit-flex-direction: row-reverse;
-      -ms-flex-direction: row-reverse;
-          flex-direction: row-reverse; }
+  -ms-flex-direction: row-reverse;
+      flex-direction: row-reverse; }
 
 .flex--col {
-  -webkit-flex-direction: column;
-      -ms-flex-direction: column;
-          flex-direction: column; }
+  -ms-flex-direction: column;
+      flex-direction: column; }
 
 .flex--col--rev {
-  -webkit-flex-direction: column-reverse;
-      -ms-flex-direction: column-reverse;
-          flex-direction: column-reverse; }
+  -ms-flex-direction: column-reverse;
+      flex-direction: column-reverse; }
 
 .flex--nowrap {
-  -webkit-flex-wrap: nowrap;
-      -ms-flex-wrap: nowrap;
-          flex-wrap: nowrap; }
+  -ms-flex-wrap: nowrap;
+      flex-wrap: nowrap; }
 
 .flex--wrap {
-  -webkit-flex-wrap: wrap;
-      -ms-flex-wrap: wrap;
-          flex-wrap: wrap; }
+  -ms-flex-wrap: wrap;
+      flex-wrap: wrap; }
 
 .flex--wrap--rev {
-  -webkit-flex-wrap: wrap-reverse;
-      -ms-flex-wrap: wrap-reverse;
-          flex-wrap: wrap-reverse; }
+  -ms-flex-wrap: wrap-reverse;
+      flex-wrap: wrap-reverse; }
 
 .flex--left {
-  -webkit-justify-content: flex-start;
-      -ms-flex-pack: start;
-          justify-content: flex-start; }
+  -ms-flex-pack: start;
+      justify-content: flex-start; }
 
 .flex--center {
-  -webkit-justify-content: center;
-      -ms-flex-pack: center;
-          justify-content: center; }
+  -ms-flex-pack: center;
+      justify-content: center; }
 
 .flex--right {
-  -webkit-justify-content: flex-end;
-      -ms-flex-pack: end;
-          justify-content: flex-end; }
+  -ms-flex-pack: end;
+      justify-content: flex-end; }
 
 .flex--justify {
-  -webkit-justify-content: space-between;
-      -ms-flex-pack: justify;
-          justify-content: space-between; }
+  -ms-flex-pack: justify;
+      justify-content: space-between; }
 
 .flex--spaced {
-  -webkit-justify-content: space-around;
-      -ms-flex-pack: distribute;
-          justify-content: space-around; }
+  -ms-flex-pack: distribute;
+      justify-content: space-around; }
 
 .flex--top {
-  -webkit-align-items: flex-start;
-      -ms-flex-align: start;
-          align-items: flex-start; }
+  -ms-flex-align: start;
+      align-items: flex-start; }
 
 .flex--middle {
-  -webkit-align-items: center;
-      -ms-flex-align: center;
-          align-items: center; }
+  -ms-flex-align: center;
+      align-items: center; }
 
 .flex--bottom {
-  -webkit-align-items: flex-end;
-      -ms-flex-align: end;
-          align-items: flex-end; }
+  -ms-flex-align: end;
+      align-items: flex-end; }
 
 .flex--stretch {
-  -webkit-align-items: stretch;
-      -ms-flex-align: stretch;
-          align-items: stretch; }
+  -ms-flex-align: stretch;
+      align-items: stretch; }
 
 .flex--baseline {
-  -webkit-align-items: baseline;
-      -ms-flex-align: baseline;
-          align-items: baseline; }
+  -ms-flex-align: baseline;
+      align-items: baseline; }
 
 .flex--top--multi {
-  -webkit-align-content: flex-start;
-      -ms-flex-line-pack: start;
-          align-content: flex-start; }
+  -ms-flex-line-pack: start;
+      align-content: flex-start; }
 
 .flex--middle--multi {
-  -webkit-align-content: center;
-      -ms-flex-line-pack: center;
-          align-content: center; }
+  -ms-flex-line-pack: center;
+      align-content: center; }
 
 .flex--bottom--multi {
-  -webkit-align-content: flex-end;
-      -ms-flex-line-pack: end;
-          align-content: flex-end; }
+  -ms-flex-line-pack: end;
+      align-content: flex-end; }
 
 .flex--stretch--multi {
-  -webkit-align-content: stretch;
-      -ms-flex-line-pack: stretch;
-          align-content: stretch; }
+  -ms-flex-line-pack: stretch;
+      align-content: stretch; }
 
 .flex--justify--multi {
-  -webkit-align-content: space-between;
-      -ms-flex-line-pack: justify;
-          align-content: space-between; }
+  -ms-flex-line-pack: justify;
+      align-content: space-between; }
 
 .flex--spaced--multi {
-  -webkit-align-content: space-around;
-      -ms-flex-line-pack: distribute;
-          align-content: space-around; }
+  -ms-flex-line-pack: distribute;
+      align-content: space-around; }
 
 .flex__item {
-  -webkit-flex: 1;
-      -ms-flex: 1;
-          flex: 1; }
+  -ms-flex: 1;
+      flex: 1; }
 
 .flex__item--top {
-  -webkit-align-self: flex-start;
-      -ms-flex-item-align: start;
-          align-self: flex-start; }
+  -ms-flex-item-align: start;
+      align-self: flex-start; }
 
 .flex__item--middle {
-  -webkit-align-self: center;
-      -ms-flex-item-align: center;
-          align-self: center; }
+  -ms-flex-item-align: center;
+      align-self: center; }
 
 .flex__item--bottom {
-  -webkit-align-self: flex-end;
-      -ms-flex-item-align: end;
-          align-self: flex-end; }
+  -ms-flex-item-align: end;
+      align-self: flex-end; }
 
 .flex__item--baseline {
-  -webkit-align-self: baseline;
-      -ms-flex-item-align: baseline;
-          align-self: baseline; }
+  -ms-flex-item-align: baseline;
+      align-self: baseline; }
 
 .btn {
   display: inline-block;
@@ -10454,11 +10560,7 @@ a {
   text-transform: none;
   white-space: nowrap;
   background-color: #e4e4ea; }
-  .btn,
-  .btn:link,
-  .btn:visited,
-  .btn:hover,
-  .btn:active {
+  .btn, .btn:link, .btn:visited, .btn:hover, .btn:active {
     color: black; }
   .btn:hover {
     border-color: #9999a3;
@@ -10495,16 +10597,23 @@ button.btn {
   border: 0;
   border-radius: 0;
   padding: 0;
-  line-height: inherit; }
-  .btn--bare,
-  .btn--bare:link,
-  .btn--bare:visited,
-  .btn--bare:hover,
-  .btn--bare:active,
-  .btn--bare:focus {
+  line-height: inherit;
+  font-size: 1.2rem;
+  width: 2.2666666667rem;
+  height: 2.2666666667rem;
+  box-shadow: none;
+  background: none;
+  outline: none; }
+  .btn--bare, .btn--bare:link, .btn--bare:visited, .btn--bare:hover, .btn--bare:active, .btn--bare:focus {
     box-shadow: none;
     background: none;
-    color: inherit; }
+    outline: none; }
+  .btn--bare, .btn--bare:link, .btn--bare:visited {
+    color: #525156; }
+  .btn--bare:hover {
+    color: #3e87e8; }
+  .btn--bare:active, .btn--bare:focus {
+    color: #2b5ea2; }
 
 header {
   height: 4rem; }
@@ -10625,13 +10734,17 @@ header {
           type: String
         },
         icon:{
-          type: String
+          type: String,
+          observer: '_iconChange'
         },
         chevron: {
           type: Boolean
         }
       },
       attached: function(){
+        this._iconChange();
+      },
+      _iconChange: function() {
         if(this.icon){
           var iconObj = this.$.headericon;
           this.toggleClass(this.icon, true, iconObj);
@@ -10882,9 +10995,7 @@ pre {
 html {
   box-sizing: border-box; }
 
-*,
-*:before,
-*:after {
+*, *:before, *:after {
   box-sizing: inherit; }
 
 /**
@@ -10918,8 +11029,7 @@ html {
   display: block;
   /* [1] */
   padding: 1rem; }
-  .box > :last-child,
-  :host > :last-child {
+  .box > :last-child, :host > :last-child {
     margin-bottom: 0; }
 
 /**
@@ -10948,52 +11058,66 @@ html {
 /**
      * Add large margins.
      */
-.u-m\00002b {
+.u-m\00002b
+{
   margin: 1.3333333333rem !important; }
 
-.u-mt\00002b {
+.u-mt\00002b
+{
   margin-top: 1.3333333333rem !important; }
 
-.u-mr\00002b {
+.u-mr\00002b
+{
   margin-right: 1.3333333333rem !important; }
 
-.u-mb\00002b {
+.u-mb\00002b
+{
   margin-bottom: 1.3333333333rem !important; }
 
-.u-ml\00002b {
+.u-ml\00002b
+{
   margin-left: 1.3333333333rem !important; }
 
-.u-mh\00002b {
+.u-mh\00002b
+{
   margin-right: 1.3333333333rem !important;
   margin-left: 1.3333333333rem !important; }
 
-.u-mv\00002b {
+.u-mv\00002b
+{
   margin-top: 1.3333333333rem !important;
   margin-bottom: 1.3333333333rem !important; }
 
 /**
      * Add huge margins.
      */
-.u-m\00002b\00002b {
+.u-m\00002b\00002b
+{
   margin: 2rem !important; }
 
-.u-mt\00002b\00002b {
+.u-mt\00002b\00002b
+{
   margin-top: 2rem !important; }
 
-.u-mr\00002b\00002b {
+.u-mr\00002b\00002b
+{
   margin-right: 2rem !important; }
 
-.u-mb\00002b\00002b {
+.u-mb\00002b\00002b
+{
   margin-bottom: 2rem !important; }
 
-.u-ml\00002b\00002b {
+.u-ml\00002b\00002b
+{
   margin-left: 2rem !important; }
 
-.u-mh\00002b\00002b {
+.u-mh\00002b\00002b
+{
   margin-right: 2rem !important;
   margin-left: 2rem !important; }
 
-.u-mv\00002b\00002b {
+.u-mv\00002b\00002b
+{
   margin-top: 2rem !important;
   margin-bottom: 2rem !important; }
 
@@ -11107,14 +11231,14 @@ html {
             }
         },
         /**
-         * this method can be call to show a card from dom
+         * this method can be called to show a card from dom
          */
         showCard: function () {
             this.hidden = false;
             this.querySelector('px-card').hidden = false;
         },
         /**
-         * this method can be call to hide a card from dom
+         * this method can be called to hide a card from dom
          */
         hideCard: function () {
             this.hidden = true;
@@ -11131,19 +11255,18 @@ html {
          * each card property name will be converted from camel case property name to lowercase words separated by dashes
          */
         getCardAttributes: function () {
-            var cardState = {};
-            var cardElement = document.querySelector(this.nodeName);
-            var cardBehaviors = cardElement.behaviors;
-            var self = this;
+            var cardState = {},
+                cardElement = document.querySelector(this.nodeName),
+                cardBehaviors = cardElement.behaviors;
 
             cardBehaviors.forEach(function (behavior) {
-                for (prop in behavior.properties) {
-                    cardState[px.slugify(prop)] = cardElement[prop];
+                for (var prop in behavior.properties) {
+                    cardState[window.px.slugify(prop)] = cardElement[prop];
                 }
             });
 
             for (var prop in cardElement.properties) {
-                cardState[px.slugify(prop)] = cardElement[prop];
+                cardState[window.px.slugify(prop)] = cardElement[prop];
             }
 
             return cardState;
@@ -11153,9 +11276,8 @@ html {
          * If you render a deck and card using px-dashboard with view-service-base-url attribute set, card url will be set by the px-dashboard component behind the scene
          */
         save: function () {
-            var state = this.getCardAttributes();
-
-            var url = this.url;
+            var state = this.getCardAttributes(),
+                url = this.url;
 
             if (url) {
                 var serializedCard = {};
@@ -11202,7 +11324,8 @@ Polymer({
          * px-card icon
          */
         icon: {
-            type: String
+            type: String,
+            notify: true
         },
         /**
          * px-card chevron

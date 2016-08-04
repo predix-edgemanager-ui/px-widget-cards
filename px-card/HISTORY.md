@@ -1,3 +1,11 @@
+0.4.7
+==================
+* changes for repo readme and demo page
+
+0.4.4
+==================
+* forced moment resolution
+
 0.4.4
 ==================
 * Added vulcanize index and demo
