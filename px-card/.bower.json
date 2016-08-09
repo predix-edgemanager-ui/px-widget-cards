@@ -1,6 +1,6 @@
 {
   "name": "px-card",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "main": [
     "px-card.html"
   ],
@@ -39,7 +39,7 @@
     "px-polymer-font-awesome": "^0.1.8",
     "px-tabs": "~0.4.0",
     "px-api-viewer": "~0.0.3",
-    "px-demo-snippet": "~0.0.11",
+    "px-demo-snippet": "^0.1.0",
     "px-actionable-text-icons-design": "^0.0.3",
     "px-code-design": "^0.2.11",
     "px-headings-design": "^0.2.14",
@@ -52,11 +52,11 @@
     "moment": "~2.13.0"
   },
   "homepage": "https://github.com/PredixDev/px-card",
-  "_release": "0.4.8",
+  "_release": "0.4.9",
   "_resolution": {
     "type": "version",
-    "tag": "v0.4.8",
-    "commit": "1aff96dae4cdf9ab268bc76017320de3e15fb680"
+    "tag": "v0.4.9",
+    "commit": "1d6bfb460a4850993f48edfe238a2000e0a2c2a5"
   },
   "_source": "https://github.com/PredixDev/px-card.git",
   "_target": "~0.4.0",
