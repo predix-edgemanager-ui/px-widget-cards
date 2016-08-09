@@ -24,6 +24,10 @@
 <script>
   Polymer({
     is: 'px-threeup',
+    properties: {
+      widgetHeader: String,
+      widgetIcon: String
+    },
     attached: function() {
       //delay the element query from executing until px-card dimension is determined.
       this.async(function(){
